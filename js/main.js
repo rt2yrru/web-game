@@ -1,84 +1,146 @@
-//Element related variables
+"use strict";
+
+/* Important Variables */
 var canvas = document.getElementById("main-canvas"),
-  context = canvas.getContext("2d");
+    context = canvas.getContext("2d");
 
-//Objects with constructors
-function Vector2(x, y) {
-  this.x = x;
-  this.y = y;
-}
-Vector2.Distance = function (a, b) {
-  return Math.sqrt( Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) );
-};
-
-//Objects without constructors
-var Player = {
-  pos : new Vector2(canvas.width / 2, canvas.height / 2),
-  size : new Vector2(50, 50),
-  name : "Player1",
-  speed : 5,
-  draw : function() {
-    context.fillStyle = "black";
-    context.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
-  },
-  move : function(e) {
-    var keyCode = e.keyCode;
-
-    //A or left arrow
-    if(keyCode === 65 || keyCode === 37) {
-      Player.pos.x -= Player.speed;
+/* Classes */
+///
+//The Vector2 class contains an X and Y coordinate. This is mainly used for setting the position of game objects.
+///
+class Vector2 {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
     }
 
-    //W or up arrow
-    if(keyCode === 87 || keyCode === 38) {
-      Player.pos.y -= Player.speed;
+    //Finds the distance between two Vectors
+    static Distance(a, b) {
+        return Math.sqrt( Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) );
     }
-
-    //D or right arrow
-    if(keyCode === 68 || keyCode === 39) {
-      Player.pos.x += Player.speed;
-    }
-
-    //S or down arrow
-    if(keyCode === 83 || keyCode === 40) {
-      Player.pos.y += Player.speed;
-    }
-  }
 }
 
-//Game functions
+///
+//The Rect class contains a width and height. This is mainly used for setting the width and height of sprites in the game world.
+///
+class Rect {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+    }
+}
+
+class GameObject {
+    constructor(name, pos, size, spritePath) {
+        //Give default values to all parameters
+        name = name || "New GameObject";
+        pos = pos || new Vector2(0, 0);
+        size = size || new Rect(0, 0);
+        spritePath = spritePath || "";
+
+        this.name = name;
+        this.pos = pos;
+        this.size = size;
+        this.sprite = new Image(size.width, size.height);
+        this.sprite.src = spritePath;
+
+        //Draw the game object
+        this.draw = function() {
+            if(this.sprite === undefined)
+                return;
+
+            context.drawImage(this.sprite, this.pos.x, this.pos.y, this.size.width, this.size.height);
+        }
+
+        this.update = function() {  }
+    }
+}
+
+/* GameObjects in the game */
+class Player extends GameObject {
+    constructor(name, pos, size, spritePath,  speed) {
+        super(name, pos, size, spritePath);
+
+        speed = speed || 5;
+
+        this.speed = speed;
+
+        //Moves the player
+        this.move = function(x, y) {
+            x = x || 0;
+            y = y || 0;
+
+            this.pos.x += x;
+            this.pos.y += y;
+        }
+    }
+}
+
+
+/* Variables */
+var player = new Player("Player1", new Vector2(canvas.width / 2, canvas.height / 2), new Rect(50, 50), "sprites/TestSprite.png", 5);
+
+var localFunctions = {
+    handlePlayerInput: function(e) {
+        var keyCode = e.keyCode;
+        var xOffset = 0;
+        var yOffset = 0;
+
+        //A
+        if(keyCode === 97) {
+            xOffset -= player.speed;
+        }
+
+        //W
+        if(keyCode === 119) {
+            yOffset -= player.speed;
+        }
+
+        //D
+        if(keyCode === 100) {
+            xOffset += player.speed;
+        }
+
+        //S
+        if(keyCode === 115) {
+            yOffset += player.speed;
+        }
+
+        player.move(xOffset, yOffset);
+    }
+}
+
+/* Game Functions */
 function start() {
-  draw(); //This acts as an inital draw
+    draw(); //This acts as an inital draw
+    window.addEventListener("keypress", localFunctions.handlePlayerInput, false);
 }
 
 function update() {
-  //Handle user input
-  document.onkeydown = Player.move;
+    //Handle user input
+    player.update();
 
-  if(Player.pos.x >= 650 && Player.pos.x <= 700 && Player.pos.y >= 50 && Player.pos.y <= 100) {
-    alert("Collision!");
-  }
+    if(player.pos.x >= 650 && player.pos.x <= 700 && player.pos.y >= 50 && player.pos.y <= 100) {
+        alert("Collision!");
+    }
 }
 
 function draw() {
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.clearRect(0, 0, canvas.width, canvas.height);
+    //Draw the background
+    context.fillStyle = "green";
+    context.fillRect(0, 0, 3000, 1000);
 
-  //context.translate(0, 0);
+    //Other objects
+    context.fillStyle = "red";
+    context.fillRect(150, 250, 50, 50);
 
-  context.fillStyle = "green";
-  context.fillRect(0, 0, 3000, 1000);
+    context.fillStyle = "red";
+    context.fillRect(650, 50, 50, 50);
 
-  Player.draw(canvas.width / 2, canvas.height / 2);
+    //Draw the player
+    player.draw();
 
-  //Other objects
-  context.fillStyle = "red";
-  context.fillRect(150, 250, 50, 50);
-
-  context.fillStyle = "red";
-  context.fillRect(650, 50, 50, 50);
-
-  console.log("X: " + Player.pos.x + " - Y: " + Player.pos.y);
+    console.log("PLAYER INFO:\n" + "X: " + player.pos.x + " - Y: " + player.pos.y);
 }
 
 function finish() {
@@ -86,9 +148,9 @@ function finish() {
 }
 
 function mainLoop() {
-  update();
-  draw();
-  requestAnimationFrame(mainLoop);
+    update();
+    draw();
+    requestAnimationFrame(mainLoop);
 }
 
 start();
