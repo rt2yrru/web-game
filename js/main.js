@@ -37,7 +37,7 @@ class Rect {
         this.width = width;
         this.height = height;
 
-        //Draws a debugging outline around the shape
+        //Draws an outline around the rect. Practical for debugging.
         this.drawOutline = function(color) {
             color = color || "black";
 
@@ -61,12 +61,10 @@ class GameObject {
     constructor(name, rect, spritePath) {
         //Give default values to all parameters
         name = name || "New GameObject";
-        //pos = pos || new Vector2(0, 0);
         rect = rect || new Rect(0, 0, 0, 0);
         spritePath = spritePath || "";
 
         this.name = name;
-        //this.pos = pos;
         this.rect = rect;
         this.sprite = new Image(rect.width, rect.height);
         this.sprite.src = spritePath;
@@ -109,7 +107,7 @@ class Player extends GameObject {
     }
 }
 
-/* Variables */
+/* GameObjects in world */
 var player = new Player("Player1", new Rect(canvas.width / 2, canvas.height /2, 64, 64), "sprites/player.png", 5);
 var bushes = [
     new GameObject("Bush1", new Rect(0, 0, 64, 64), "sprites/bush.png"),
@@ -128,6 +126,8 @@ var bushes = [
     new GameObject("Bush14", new Rect(832, 0, 64, 64), "sprites/bush.png"),
     new GameObject("Bush15", new Rect(896, 0, 64, 64), "sprites/bush.png")
 ];
+
+var bush = new GameObject("Bush", new Rect(0, 0, 64, 64), "sprites/bush.png");
 
 var localFunctions = {
     handlePlayerInput: function(e) {
@@ -156,13 +156,16 @@ var localFunctions = {
         }
 
         player.move(xOffset, yOffset);
+    },
+    addEvents: function() {
+        window.addEventListener("keypress", localFunctions.handlePlayerInput, false);
     }
 }
 
 /* Game Functions */
 function start() {
     draw(); //This acts as an inital draw
-    window.addEventListener("keypress", localFunctions.handlePlayerInput, false);
+    localFunctions.addEvents();
 }
 
 function update() {
@@ -182,9 +185,15 @@ function draw() {
     context.fillRect(0, 0, 3000, 1000);
 
     //Draw the map outlines
-    for(var i = 0; i < bushes.length; i++) { //Top
-        bushes[i].draw();
-        console.log(bushes[i].name);
+    for(var i = 0; i < 15; i++) { //Top
+        var newBush = new GameObject(bush.name, new Rect(bush.rect.x + (bush.rect.width * i), 0, bush.rect.width, bush.rect.height), bush.sprite.src);
+        newBush.draw();
+        //bushes[i].draw();
+    }
+    
+    for(var i = 0; i < 15; i++) { //Left
+        var newBush = new GameObject(bush.name, new Rect(0, bush.rect.y + (bush.rect.height * i), bush.rect.width, bush.rect.height), bush.sprite.src);
+        newBush.draw();
     }
 
     //Draw the player
