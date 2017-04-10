@@ -1,47 +1,35 @@
 "use strict";
 
 /* Classes */
+//The Vector2 class is one of the most important classes. It contains an X and a Y coordinate.
+class Vector2 {
+	constructor(x, y) {
+		this.x = x || 0;
+		this.y = y || 0;
+	}
+}
+
 //The Rect class contains a width and height. This is mainly used for setting the width and height of sprites in the game world.
 class Rect {
-    constructor(x, y, width, height) {
-        this.x = x || 0;
-        this.y = y || 0;
+    constructor(position, width, height) {
+        this.position = position || new Vector2();
         this.width = width || 0;
         this.height = height || 0;
-		
-		//Events (must be placed after all of the functions above
-		window.addEventListener("onCollide", this.collisionHandler);
     }
 	
 	//Returns true if this rect is overlapping with another rect, false otherwise.
 	isOverlapping(rect) {
-		return utils.rangeIntersect(this.x, this.x + this.width, rect.x, rect.x + rect.width) &&
-			utils.rangeIntersect(this.y, this.y + this.height, rect.y, rect.y + rect.height);
+		return utils.rangeIntersect(this.position.x, this.position.x + this.width, rect.position.x, rect.position.x + rect.width) &&
+			utils.rangeIntersect(this.position.y, this.position.y + this.height, rect.position.y, rect.position.y + rect.height);
 	}
 	
 	//Draws an outline around the rect. Practical for debugging.
 	drawOutline(color) {
 		color = color || "black";
 
-            context.strokeStyle = color;
-            context.rect(this.x, this.y, this.width, this.height);
-            context.stroke();
-	}
-	
-	triggerCollision() {
-		console.log("Trigger collision event.");
-			
-		var collisionEvent = new CustomEvent("onCollide", {
-			"detail": {
-				collider: this
-			}
-		});
-		
-		window.dispatchEvent(collisionEvent);
-	}
-	
-	collisionHandler(e) {
-		console.log("Collision is being handled...");
+		context.strokeStyle = color;
+		context.rect(this.position.x, this.position.y, this.width, this.height);
+		context.stroke();
 	}
 }
 
@@ -50,7 +38,7 @@ class GameObject {
     constructor(name, rect, spritePath) {
         //Give default values to all parameters
         name = name || "New GameObject";
-        rect = rect || new Rect(0, 0, 0, 0);
+        rect = rect || new Rect();
         spritePath = spritePath || "";
 
         //Set up the object
@@ -58,34 +46,60 @@ class GameObject {
         this.rect = rect;
         this.sprite = new Image(rect.width, rect.height);
         this.sprite.src = spritePath;
+		this.previousPosition = new Vector2();
+		
+		//Listen for events
+		window.addEventListener("onCollide", this.collisionHandler);
     }
 	
 	//Draw the game object
 	draw() {
-		if(this.sprite === undefined) {
+		if(this.sprite === undefined || this.sprite === null) {
 			return;
 		}
             
-		context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+		context.drawImage(this.sprite, this.rect.position.x, this.rect.position.y, this.rect.width, this.rect.height);
 	}
 	
 	//Moves the game object
-	move(x, y) {
-		x = x || 0;
-		y = y || 0;
+	move(position) {
+		position = position || new Vector2(0, 0);
 		
-		this.rect.x += x;
-		this.rect.y += y;
+		this.rect.position.x += position.x;
+		this.rect.position.y += position.y;
+	}
+	
+	//Triggers a collison with another game object
+	triggerCollision(gameObj, gameObjCol) {
+		//console.log("Trigger collision event.");
+			
+		var collisionEvent = new CustomEvent("onCollide", {
+			"detail": {
+				gameObject: gameObj,
+				gameObjectCollidedWith: gameObjCol
+			}
+		});
+		
+		window.dispatchEvent(collisionEvent);
+	}
+	
+	//Logic that happens during a collision.
+	collisionHandler(e) { }
+	
+	//Called every frame.
+	update() {
+		this.previousPosition = new Vector2(this.rect.position.x, this.rect.position.y);
+		this.rect.drawOutline("black");
 	}
 
     //Creates a new instance of a provided game object
     static createNewInstance(instance) {
-        if (instance === undefined) {
+        if (instance === undefined || instance === null) {
             return undefined;
         }
 
         //Make new instance of and return the game object
-        return new GameObject(instance.name, new Rect(0, 0, instance.rect.width, instance.rect.height), instance.sprite.src);
+        return new GameObject(instance.name, new Rect(new Vector2(), instance.rect.width, instance.rect.height), instance.sprite.src);
     }
 }
 
@@ -99,7 +113,18 @@ class Player extends GameObject {
 	
 	//Handles collision for the player
 	collisionHandler(e) {
-		console.log("shit");
+		var gameObj = e.detail.gameObject;
+		var collidedGameObj = e.detail.gameObjectCollidedWith;
+		
+		if(gameObj.rect.position.x < collidedGameObj.rect.position.x) { //Left side
+			gameObj.rect.position.x = collidedGameObj.rect.position.x - gameObj.rect.width;
+		} else if(gameObj.rect.position.x > collidedGameObj.rect.position.x) { //Right side
+			gameObj.rect.position.x = collidedGameObj.rect.position.x + collidedGameObj.rect.width;
+		}
+	}
+	
+	update() {
+		
 	}
 }
 
@@ -117,45 +142,68 @@ var utils = {
     }
 };
 
-/* Constants */
-var KEY_A = 97;
-var KEY_W = 119;
-var KEY_D = 100;
-var KEY_S = 115;
-
 /* Main game variable stuff */
+Game.Keycode = {
+	A: 97,
+	B: 98,
+	C: 99,
+	D: 100,
+	E: 101,
+	F: 102,
+	G: 103,
+	H: 104,
+	I: 105,
+	J: 106,
+	K: 107,
+	L: 108,
+	M: 109,
+	N: 110,
+	O: 111,
+	P: 112,
+	Q: 113,
+	R: 114,
+	S: 115,
+	T: 116,
+	U: 117,
+	V: 118,
+	W: 119,
+	X: 120,
+	Y: 121,
+	Z: 122
+};
+
 Game.GameObjects = {
-    Player: new Player(name = "Player1", new Rect((canvasWidth / 2) - (80 / 2), (canvasHeight / 2) - (80 / 2), 80, 80), "sprites/player.png", 5),
-    Bush: new GameObject("Bush", new Rect(0, 0, 64, 64), "sprites/bush.png")
+    Player: new Player(name = "Player1", new Rect(new Vector2((canvasWidth / 2) - (80 / 2), (canvasHeight / 2) - (80 / 2)), 80, 80), "sprites/player.png", 5),
+    Bush: new GameObject("Bush", new Rect(new Vector2(), 64, 64), "sprites/bush.png")
 };
 
 var localFunctions = {
     handlePlayerInput: function(e) {
-        var keyCode = e.keyCode;
+        var keyCode = e.which;
         var xOffset = 0;
         var yOffset = 0;
 		
         //A
-        if(keyCode === KEY_A) {
+        if(keyCode === Game.Keycode.A) {
             xOffset -= Game.GameObjects.Player.speed;
         }
 
         //W
-        if(keyCode === KEY_W) {
+        if(keyCode === Game.Keycode.W) {
             yOffset -= Game.GameObjects.Player.speed;
         }
 
         //D
-        if(keyCode === KEY_D) {
+        if(keyCode === Game.Keycode.D) {
             xOffset += Game.GameObjects.Player.speed;
         }
 
         //S
-        if(keyCode === KEY_S) {
+        if(keyCode === Game.Keycode.S) {
             yOffset += Game.GameObjects.Player.speed;
         }
 
-        Game.GameObjects.Player.move(xOffset, yOffset);
+        Game.GameObjects.Player.move(new Vector2(xOffset, yOffset));
     },
 	addPlayer: function() {
 		_totalGameObjects.push(Game.GameObjects.Player);
@@ -167,8 +215,8 @@ var localFunctions = {
         for (i = 0; i < (canvasWidth / Game.GameObjects.Bush.rect.width); i++) {
             //Set position of the bush
             gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
-            gameObj.rect.x = gameObj.rect.x + (gameObj.rect.width * i);
-            gameObj.rect.y = 0;
+            gameObj.rect.position.x = gameObj.rect.position.x + (gameObj.rect.width * i);
+            gameObj.rect.position.y = 0;
 
             //Push game object to the total game objects list
             _totalGameObjects.push(gameObj);
@@ -181,8 +229,8 @@ var localFunctions = {
         for (i = 0; i < (canvasWidth / Game.GameObjects.Bush.rect.width) ; i++) {
             //Set position of the bush
             gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
-            gameObj.rect.x = gameObj.rect.x + (gameObj.rect.width * i);
-            gameObj.rect.y = canvas.height - gameObj.rect.height;
+            gameObj.rect.position.x = gameObj.rect.position.x + (gameObj.rect.width * i);
+            gameObj.rect.position.y = canvas.height - gameObj.rect.height;
 
             //Push game object to the total game objects list
             _totalGameObjects.push(gameObj);
@@ -195,8 +243,8 @@ var localFunctions = {
         for (i = 0; i < (canvasHeight / Game.GameObjects.Bush.rect.height) ; i++) {
             //Set position of the bush
             gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
-            gameObj.rect.x = 0;
-            gameObj.rect.y = gameObj.rect.y + (gameObj.rect.height * i);
+            gameObj.rect.position.x = 0;
+            gameObj.rect.position.y = gameObj.rect.position.y + (gameObj.rect.height * i);
 
             //Push game object to the total game objects list
             _totalGameObjects.push(gameObj);
@@ -209,8 +257,8 @@ var localFunctions = {
         for (i = 0; i < (canvasHeight / Game.GameObjects.Bush.rect.height) ; i++) {
             //Set position of the bush
             gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
-            gameObj.rect.x = canvasWidth - gameObj.rect.width;
-            gameObj.rect.y = gameObj.rect.y + (gameObj.rect.height * i);
+            gameObj.rect.position.x = canvasWidth - gameObj.rect.width;
+            gameObj.rect.position.y = gameObj.rect.position.y + (gameObj.rect.height * i);
 
             //Push game object to the total game objects list
             _totalGameObjects.push(gameObj);
@@ -229,14 +277,12 @@ var collisionFunctions = {
 		for(i = 0; i < _totalGameObjects.length; i++) {
 			if(_totalGameObjects[i].name === Game.GameObjects.Bush.name) {
 				if(Game.GameObjects.Player.rect.isOverlapping(_totalGameObjects[i].rect)) {
-					Game.GameObjects.Player.triggerCollision();
+					Game.GameObjects.Player.triggerCollision(Game.GameObjects.Player, _totalGameObjects[i]);
+					
 					break;
 				}
 			}
 		}
-	},
-	handlePlayerCollison: function() {
-		
 	}
 };
 
@@ -259,22 +305,18 @@ function start() {
 	localFunctions.addEvents(); //Add event handlers
 
     draw(); //This acts as an inital draw
-	
-	Game.GameObjects.Player.rect.triggerCollision();
 }
 
 function update() {
-	
+	var i;
+	for(i = 0; i < _totalGameObjects.length; i++) {
+		_totalGameObjects[i].update();
+	}
 }
 
 function detectCollision() {
 	//Player collision
-	//collisionFunctions.detectPlayerCollision();
-}
-
-function handleCollision() {
-	//Player collision
-	//collisionFunctions.handlePlayerCollison();
+	collisionFunctions.detectPlayerCollision();
 }
 
 function draw() {
@@ -293,7 +335,6 @@ function draw() {
 	}
 
     //Debugging
-    //Draw border around player's collision bounds
 	Game.GameObjects.Player.rect.drawOutline("red");
 }
 
@@ -304,7 +345,6 @@ function finish() {
 function mainLoop() {
     update();
 	detectCollision();
-	handleCollision();
     draw();
     requestAnimationFrame(mainLoop);
 }
