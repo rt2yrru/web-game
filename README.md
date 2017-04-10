@@ -1,11 +1,10 @@
-# life-rpg
+# web-game
 ---
-life-rpg is a very simple 2D game. It is written with the languages of the web(HTML5, CSS3, and JavaScript). C or C++ would have
-been chosen for this project, but since it takes approximately 2 seconds to save a JavaScript file and see the results in the
-browser, I chose to make a web game.
+The sole purpose of web-game is for me to teach myself more about game development. Using tools such as Unity3D and Unreal Engine 4 take care of a lot
+of the work for you and I want to learn some of things they do behind the scenes.
 
-The main goal of this project is to just teach myself more about game development. I have a lot of experience in Unity3D, but I
-have realized that Unity takes care of a lot of the heavy lifting. I would like to try to just learn more about how basic game development
-works.
+I choose to do this over the web(HTML5 and JavaScript) so I will not have to worry about learning OpenGL or DirectX right now. I plan to do this in the future, but right
+now I want to focus on other things.
 
-If life-rpg actually does become a game, it will be free for everyone, and free forever.
+Feel free to take a look at the source code. There will be some parts that are great, and other parts that are not so great. You are encouraged to give feedback
+if you see anything that you think could use improvement.
