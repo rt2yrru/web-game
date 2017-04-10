@@ -1,62 +1,51 @@
 "use strict";
 
-/* Important Variables */
-var canvas = document.getElementById("main-canvas"),
-    context = canvas.getContext("2d");
-
-var utils = {
-    rangeIntersect: function(min0, max0, min1, max1) {
-        return Math.max(min0, max0) > Math.min(min1, max1) &&
-            Math.min(min0, max0) < Math.max(min1, max1);
-    }
-}
-
 /* Classes */
-///
-//The Vector2 class contains an X and Y coordinate. This is mainly used for setting the position of game objects.
-///
-class Vector2 {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    //Finds the distance between two Vectors
-    static Distance(a, b) {
-        return Math.sqrt( Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) );
-    }
-}
-
-///
 //The Rect class contains a width and height. This is mainly used for setting the width and height of sprites in the game world.
-///
 class Rect {
     constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-
-        //Draws an outline around the rect. Practical for debugging.
-        this.drawOutline = function(color) {
-            color = color || "black";
+        this.x = x || 0;
+        this.y = y || 0;
+        this.width = width || 0;
+        this.height = height || 0;
+		
+		//Events (must be placed after all of the functions above
+		window.addEventListener("onCollide", this.collisionHandler);
+    }
+	
+	//Returns true if this rect is overlapping with another rect, false otherwise.
+	isOverlapping(rect) {
+		return utils.rangeIntersect(this.x, this.x + this.width, rect.x, rect.x + rect.width) &&
+			utils.rangeIntersect(this.y, this.y + this.height, rect.y, rect.y + rect.height);
+	}
+	
+	//Draws an outline around the rect. Practical for debugging.
+	drawOutline(color) {
+		color = color || "black";
 
             context.strokeStyle = color;
             context.rect(this.x, this.y, this.width, this.height);
             context.stroke();
-        }
-
-        //Returns true if this rect is overlapping with another rect, false otherwise.
-        this.isOverlapping = function(rect) {
-            return utils.rangeIntersect(this.x, this.x + this.width, rect.x, rect.x + rect.width) &&
-                utils.rangeIntersect(this.y, this.y + this.height, rect.y, rect.y + rect.height);
-        }
-    }
+	}
+	
+	triggerCollision() {
+		console.log("Trigger collision event.");
+			
+		var collisionEvent = new CustomEvent("onCollide", {
+			"detail": {
+				collider: this
+			}
+		});
+		
+		window.dispatchEvent(collisionEvent);
+	}
+	
+	collisionHandler(e) {
+		console.log("Collision is being handled...");
+	}
 }
 
-///
 //The GameObject class contains information about every game object in the world.
-///
 class GameObject {
     constructor(name, rect, spritePath) {
         //Give default values to all parameters
@@ -64,152 +53,258 @@ class GameObject {
         rect = rect || new Rect(0, 0, 0, 0);
         spritePath = spritePath || "";
 
+        //Set up the object
         this.name = name;
         this.rect = rect;
         this.sprite = new Image(rect.width, rect.height);
         this.sprite.src = spritePath;
+    }
+	
+	//Draw the game object
+	draw() {
+		if(this.sprite === undefined) {
+			return;
+		}
+            
+		context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+	}
+	
+	//Moves the game object
+	move(x, y) {
+		x = x || 0;
+		y = y || 0;
+		
+		this.rect.x += x;
+		this.rect.y += y;
+	}
 
-        //Draw the game object
-        this.draw = function(withoutSprite, color) {
-            withoutSprite = withoutSprite || false;
-            color = color || "black"
-
-            if(this.sprite === undefined && withoutSprite)
-                return;
-
-            if(!withoutSprite) {
-                context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.width, this.rect.height);
-            } else {
-                context.fillStyle = color;
-                context.fillRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
-            }
+    //Creates a new instance of a provided game object
+    static createNewInstance(instance) {
+        if (instance === undefined) {
+            return undefined;
         }
 
-        //Moves the game object
-        this.move = function(x, y) {
-            x = x || 0;
-            y = y || 0;
-
-            this.rect.x += x;
-            this.rect.y += y;
-        }
+        //Make new instance of and return the game object
+        return new GameObject(instance.name, new Rect(0, 0, instance.rect.width, instance.rect.height), instance.sprite.src);
     }
 }
 
-/* GameObjects in the game */
+//The Player class that handles everything involved with the player.
 class Player extends GameObject {
     constructor(name, rect, spritePath,  speed) {
         super(name, rect, spritePath);
 
-        speed = speed || 5;
-
-        this.speed = speed;
+        this.speed = speed || 1;
     }
+	
+	//Handles collision for the player
+	collisionHandler(e) {
+		console.log("shit");
+	}
 }
 
-/* GameObjects in world */
-var player = new Player("Player1", new Rect(canvas.width / 2, canvas.height /2, 64, 64), "sprites/player.png", 5);
-var bushes = [
-    new GameObject("Bush1", new Rect(0, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush2", new Rect(64, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush3", new Rect(128, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush4", new Rect(192, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush5", new Rect(256, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush6", new Rect(320, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush7", new Rect(384, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush8", new Rect(448, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush9", new Rect(512, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush10", new Rect(576, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush11", new Rect(640, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush12", new Rect(704, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush13", new Rect(768, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush14", new Rect(832, 0, 64, 64), "sprites/bush.png"),
-    new GameObject("Bush15", new Rect(896, 0, 64, 64), "sprites/bush.png")
-];
+/* Important Variables */
+var Game = { };
+var canvas = document.getElementById("main-canvas"),
+    context = canvas.getContext("2d"),
+	canvasWidth = canvas.width,
+	canvasHeight = canvas.height;
 
-var bush = new GameObject("Bush", new Rect(0, 0, 64, 64), "sprites/bush.png");
+var utils = {
+    rangeIntersect: function(min0, max0, min1, max1) {
+        return Math.max(min0, max0) > Math.min(min1, max1) &&
+            Math.min(min0, max0) < Math.max(min1, max1);
+    }
+};
+
+/* Constants */
+var KEY_A = 97;
+var KEY_W = 119;
+var KEY_D = 100;
+var KEY_S = 115;
+
+/* Main game variable stuff */
+Game.GameObjects = {
+    Player: new Player(name = "Player1", new Rect((canvasWidth / 2) - (80 / 2), (canvasHeight / 2) - (80 / 2), 80, 80), "sprites/player.png", 5),
+    Bush: new GameObject("Bush", new Rect(0, 0, 64, 64), "sprites/bush.png")
+};
 
 var localFunctions = {
     handlePlayerInput: function(e) {
         var keyCode = e.keyCode;
         var xOffset = 0;
         var yOffset = 0;
-
+		
         //A
-        if(keyCode === 97) {
-            xOffset -= player.speed;
+        if(keyCode === KEY_A) {
+            xOffset -= Game.GameObjects.Player.speed;
         }
 
         //W
-        if(keyCode === 119) {
-            yOffset -= player.speed;
+        if(keyCode === KEY_W) {
+            yOffset -= Game.GameObjects.Player.speed;
         }
 
         //D
-        if(keyCode === 100) {
-            xOffset += player.speed;
+        if(keyCode === KEY_D) {
+            xOffset += Game.GameObjects.Player.speed;
         }
 
         //S
-        if(keyCode === 115) {
-            yOffset += player.speed;
+        if(keyCode === KEY_S) {
+            yOffset += Game.GameObjects.Player.speed;
         }
 
-        player.move(xOffset, yOffset);
+        Game.GameObjects.Player.move(xOffset, yOffset);
     },
+	addPlayer: function() {
+		_totalGameObjects.push(Game.GameObjects.Player);
+	},
+	addTopBorder: function() {
+		var i;
+        var gameObj;
+
+        for (i = 0; i < (canvasWidth / Game.GameObjects.Bush.rect.width); i++) {
+            //Set position of the bush
+            gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
+            gameObj.rect.x = gameObj.rect.x + (gameObj.rect.width * i);
+            gameObj.rect.y = 0;
+
+            //Push game object to the total game objects list
+            _totalGameObjects.push(gameObj);
+        }
+	},
+	addBottomBorder: function() {
+		var i;
+        var gameObj;
+
+        for (i = 0; i < (canvasWidth / Game.GameObjects.Bush.rect.width) ; i++) {
+            //Set position of the bush
+            gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
+            gameObj.rect.x = gameObj.rect.x + (gameObj.rect.width * i);
+            gameObj.rect.y = canvas.height - gameObj.rect.height;
+
+            //Push game object to the total game objects list
+            _totalGameObjects.push(gameObj);
+        }
+	},
+	addLeftBorder: function() {
+		var i;
+        var gameObj;
+
+        for (i = 0; i < (canvasHeight / Game.GameObjects.Bush.rect.height) ; i++) {
+            //Set position of the bush
+            gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
+            gameObj.rect.x = 0;
+            gameObj.rect.y = gameObj.rect.y + (gameObj.rect.height * i);
+
+            //Push game object to the total game objects list
+            _totalGameObjects.push(gameObj);
+        }
+	},
+	addRightBorder: function() {
+		var i;
+        var gameObj;
+
+        for (i = 0; i < (canvasHeight / Game.GameObjects.Bush.rect.height) ; i++) {
+            //Set position of the bush
+            gameObj = GameObject.createNewInstance(Game.GameObjects.Bush);
+            gameObj.rect.x = canvasWidth - gameObj.rect.width;
+            gameObj.rect.y = gameObj.rect.y + (gameObj.rect.height * i);
+
+            //Push game object to the total game objects list
+            _totalGameObjects.push(gameObj);
+        }
+	},
     addEvents: function() {
         window.addEventListener("keypress", localFunctions.handlePlayerInput, false);
+		//window.addEventListener("onCollision", Game.GameObjects.Player.onCollision, false);
     }
-}
+};
+var collisionFunctions = {
+	detectPlayerCollision: function() {
+		var i;
+		
+		//Check if player is colliding with any bushes
+		for(i = 0; i < _totalGameObjects.length; i++) {
+			if(_totalGameObjects[i].name === Game.GameObjects.Bush.name) {
+				if(Game.GameObjects.Player.rect.isOverlapping(_totalGameObjects[i].rect)) {
+					Game.GameObjects.Player.triggerCollision();
+					break;
+				}
+			}
+		}
+	},
+	handlePlayerCollison: function() {
+		
+	}
+};
+
+//Important gloabl variables
+var _totalGameObjects = [];
 
 /* Game Functions */
 function start() {
+	//Set size and height of game
+    canvasWidth = canvas.width;
+    canvasHeight = canvas.height;
+
+    //Add game objects to the total game objects list. This is so they are drawn every time the draw() function is called.
+	localFunctions.addPlayer();
+    localFunctions.addTopBorder();
+    localFunctions.addBottomBorder();
+    localFunctions.addLeftBorder();
+    localFunctions.addRightBorder();
+	
+	localFunctions.addEvents(); //Add event handlers
+
     draw(); //This acts as an inital draw
-    localFunctions.addEvents();
+	
+	Game.GameObjects.Player.rect.triggerCollision();
 }
 
 function update() {
-    for(var i = 0; i < bushes.length; i++) {
-        if(player.rect.isOverlapping(bushes[i].rect)) {
-            console.log("Player is overlapping with: \"" + bushes[i].name + "\"!");
-        }
-    }
+	
+}
+
+function detectCollision() {
+	//Player collision
+	//collisionFunctions.detectPlayerCollision();
+}
+
+function handleCollision() {
+	//Player collision
+	//collisionFunctions.handlePlayerCollison();
 }
 
 function draw() {
-    //context.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.width = canvas.width;
-
+	canvas.width = canvas.width;
+	
+    //Load XML level
+	// ...
+	
     //Draw the background
-    context.fillStyle = "green";
-    context.fillRect(0, 0, 3000, 1000);
+	context.fillStyle = "green";
+	context.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    //Draw the map outlines
-    for(var i = 0; i < 15; i++) { //Top
-        var newBush = new GameObject(bush.name, new Rect(bush.rect.x + (bush.rect.width * i), 0, bush.rect.width, bush.rect.height), bush.sprite.src);
-        newBush.draw();
-        //bushes[i].draw();
-    }
-    
-    for(var i = 0; i < 15; i++) { //Left
-        var newBush = new GameObject(bush.name, new Rect(0, bush.rect.y + (bush.rect.height * i), bush.rect.width, bush.rect.height), bush.sprite.src);
-        newBush.draw();
-    }
-
-    //Draw the player
-    player.draw();
+    //Draw all game objects
+	for (var i = 0; i < _totalGameObjects.length; i++) {
+	    _totalGameObjects[i].draw();
+	}
 
     //Debugging
     //Draw border around player's collision bounds
-    player.rect.drawOutline("red");
+	Game.GameObjects.Player.rect.drawOutline("red");
 }
 
 function finish() {
-
+	
 }
 
 function mainLoop() {
     update();
+	detectCollision();
+	handleCollision();
     draw();
     requestAnimationFrame(mainLoop);
 }
